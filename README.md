@@ -18,14 +18,6 @@ All sections are optional — only enable what you need.
 
 ---
 
-## Screenshots
-
-![Command Center Overview](https://via.placeholder.com/800x450?text=Overview+Page)
-![Instagram Grid](https://via.placeholder.com/800x450?text=Instagram+Visual+Grid)
-![Stripe Dashboard](https://via.placeholder.com/800x450?text=Stripe+Revenue)
-
----
-
 ## Requirements
 
 - A Mac, Linux, or Windows computer
