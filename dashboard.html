@@ -1,0 +1,1911 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Command Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<!-- Google OAuth not needed - using proxy + gws CLI -->
+
+<style>
+/* ============================================
+   CSS VARIABLES & THEMES
+   ============================================ */
+:root {
+  --font-display: 'Orbitron', sans-serif;
+  --font-body: 'Space Grotesk', sans-serif;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="dark"] {
+  --bg-primary: #06060e;
+  --bg-secondary: #0c0c1a;
+  --bg-card: #101024;
+  --bg-card-hover: #14142e;
+  --bg-input: #0e0e20;
+  --border: #1a1a3a;
+  --border-hover: #2a2a50;
+  --text-primary: #e8e8f4;
+  --text-secondary: #7878a0;
+  --text-muted: #4a4a70;
+  --neon-cyan: #00f0ff;
+  --neon-pink: #ff0080;
+  --neon-green: #00ff88;
+  --neon-orange: #ffaa00;
+  --neon-red: #ff3366;
+  --neon-purple: #aa44ff;
+  --accent: var(--neon-cyan);
+  --accent-dim: rgba(0, 240, 255, 0.1);
+  --accent-mid: rgba(0, 240, 255, 0.25);
+  --danger: var(--neon-red);
+  --danger-dim: rgba(255, 51, 102, 0.1);
+  --success: var(--neon-green);
+  --success-dim: rgba(0, 255, 136, 0.1);
+  --warning: var(--neon-orange);
+  --warning-dim: rgba(255, 170, 0, 0.1);
+  --overlay: rgba(6, 6, 14, 0.85);
+}
+
+[data-theme="light"] {
+  --bg-primary: #f2f3f8;
+  --bg-secondary: #e8e9f0;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f8f8fc;
+  --bg-input: #f0f0f6;
+  --border: #d8d8e8;
+  --border-hover: #c0c0d8;
+  --text-primary: #0e0e24;
+  --text-secondary: #5a5a80;
+  --text-muted: #9898b0;
+  --neon-cyan: #0088aa;
+  --neon-pink: #cc0066;
+  --neon-green: #00995c;
+  --neon-orange: #cc8800;
+  --neon-red: #cc2244;
+  --neon-purple: #7722cc;
+  --accent: #0088aa;
+  --accent-dim: rgba(0, 136, 170, 0.08);
+  --accent-mid: rgba(0, 136, 170, 0.18);
+  --danger: #cc2244;
+  --danger-dim: rgba(204, 34, 68, 0.08);
+  --success: #00995c;
+  --success-dim: rgba(0, 153, 92, 0.08);
+  --warning: #cc8800;
+  --warning-dim: rgba(204, 136, 0, 0.08);
+  --overlay: rgba(242, 243, 248, 0.9);
+}
+
+/* ============================================
+   RESET & BASE
+   ============================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; scrollbar-width: thin; scrollbar-color: var(--border-hover) var(--bg-secondary); }
+body {
+  font-family: var(--font-body);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-secondary); }
+::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 4px; }
+
+[data-theme="dark"] body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 0%, rgba(0, 240, 255, 0.03) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 100%, rgba(255, 0, 128, 0.03) 0%, transparent 60%);
+  pointer-events: none; z-index: 0;
+}
+
+/* ============================================
+   SETUP SCREEN
+   ============================================ */
+#setup-screen {
+  position: fixed; inset: 0;
+  background: var(--bg-primary);
+  z-index: 10000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 2rem;
+}
+.setup-container { max-width: 560px; width: 100%; }
+.setup-logo {
+  font-family: var(--font-display); font-size: 1.8rem; font-weight: 800;
+  color: var(--accent); text-align: center; margin-bottom: 0.5rem;
+  letter-spacing: 2px; text-shadow: 0 0 10px var(--accent);
+}
+.setup-subtitle { text-align: center; color: var(--text-secondary); margin-bottom: 2rem; font-size: 0.95rem; }
+.setup-step { display: none; }
+.setup-step.active { display: block; animation: fadeSlideIn 0.4s ease; }
+.setup-step h2 { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; letter-spacing: 1px; }
+.setup-step p { color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.5rem; }
+.setup-field { margin-bottom: 1.2rem; }
+.setup-field label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 1px; }
+.setup-field input, .settings-input {
+  width: 100%; padding: 0.75rem 1rem;
+  background: var(--bg-input); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text-primary);
+  font-family: var(--font-body); font-size: 0.9rem; transition: var(--transition);
+}
+.setup-field input:focus, .settings-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+.setup-field input::placeholder, .settings-input::placeholder { color: var(--text-muted); }
+.setup-nav { display: flex; gap: 1rem; margin-top: 2rem; }
+.setup-progress { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 2rem; }
+.setup-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); transition: var(--transition); }
+.setup-dot.active { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+.setup-dot.completed { background: var(--success); }
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+.btn {
+  padding: 0.7rem 1.5rem; border: none; border-radius: var(--radius-sm);
+  font-family: var(--font-body); font-size: 0.85rem; font-weight: 600;
+  cursor: pointer; transition: var(--transition);
+  display: inline-flex; align-items: center; gap: 0.5rem;
+}
+.btn-primary { background: var(--accent); color: #000; flex: 1; }
+[data-theme="dark"] .btn-primary:hover { box-shadow: 0 0 20px var(--accent); transform: translateY(-1px); }
+.btn-secondary { background: var(--bg-input); color: var(--text-secondary); border: 1px solid var(--border); }
+.btn-secondary:hover { border-color: var(--border-hover); color: var(--text-primary); }
+.btn-ghost { background: transparent; color: var(--text-secondary); padding: 0.5rem 0.75rem; }
+.btn-ghost:hover { color: var(--text-primary); background: var(--accent-dim); }
+.btn-danger { background: var(--danger-dim); color: var(--danger); border: 1px solid transparent; }
+.btn-danger:hover { border-color: var(--danger); }
+.btn-sm { padding: 0.4rem 0.8rem; font-size: 0.78rem; }
+
+/* ============================================
+   LAYOUT — FULL WIDTH
+   ============================================ */
+#app { display: none; min-height: 100vh; position: relative; z-index: 1; }
+#app.visible { display: block; }
+
+.sidebar {
+  position: fixed; top: 0; left: 0; width: 72px; height: 100vh;
+  background: var(--bg-secondary); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; align-items: center;
+  padding: 1.2rem 0; z-index: 100;
+}
+.sidebar-logo { font-family: var(--font-display); font-size: 0.65rem; font-weight: 800; color: var(--accent); letter-spacing: 2px; margin-bottom: 2rem; text-shadow: 0 0 10px var(--accent); }
+.nav-items { display: flex; flex-direction: column; gap: 0.5rem; flex: 1; }
+.nav-item {
+  width: 44px; height: 44px; border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: var(--transition); color: var(--text-muted);
+  position: relative; background: transparent; border: none; font-size: 1.2rem;
+}
+.nav-item:hover { color: var(--text-primary); background: var(--accent-dim); }
+.nav-item.active { color: var(--accent); background: var(--accent-dim); }
+.nav-item .tooltip {
+  position: absolute; left: 60px; background: var(--bg-card); border: 1px solid var(--border);
+  padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.75rem; font-weight: 500;
+  white-space: nowrap; opacity: 0; pointer-events: none; transition: var(--transition); color: var(--text-primary);
+}
+.nav-item:hover .tooltip { opacity: 1; }
+.nav-bottom { display: flex; flex-direction: column; gap: 0.5rem; align-items: center; }
+
+/* FULL WIDTH main content */
+.main-content {
+  margin-left: 72px;
+  padding: 2rem 3rem;
+  width: calc(100% - 72px);
+}
+
+.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; }
+.page-title { font-family: var(--font-display); font-size: 1.4rem; font-weight: 700; letter-spacing: 1px; }
+.page-subtitle { color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.25rem; }
+.header-actions { display: flex; gap: 0.75rem; align-items: center; }
+
+.page { display: none; }
+.page.active { display: block; animation: fadeSlideIn 0.3s ease; }
+
+@keyframes fadeSlideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ============================================
+   CARDS
+   ============================================ */
+.card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.5rem; transition: var(--transition);
+}
+.card:hover { border-color: var(--border-hover); }
+.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+.card-title { font-family: var(--font-display); font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1.5px; }
+.card-badge { font-size: 0.7rem; padding: 0.2rem 0.6rem; border-radius: 20px; font-weight: 600; }
+.badge-success { background: var(--success-dim); color: var(--success); }
+.badge-danger { background: var(--danger-dim); color: var(--danger); }
+.badge-warning { background: var(--warning-dim); color: var(--warning); }
+.badge-info { background: var(--accent-dim); color: var(--accent); }
+
+/* Stat Cards */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+.stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem 1.5rem; }
+.stat-card:hover { border-color: var(--border-hover); }
+.stat-label { font-size: 0.7rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.5rem; font-family: var(--font-display); }
+.stat-value { font-family: var(--font-display); font-size: 1.8rem; font-weight: 800; line-height: 1.1; }
+.stat-change { font-size: 0.78rem; font-weight: 600; margin-top: 0.4rem; display: flex; align-items: center; gap: 0.3rem; }
+.stat-change.positive { color: var(--success); }
+.stat-change.negative { color: var(--danger); }
+.stat-card.accent-border { border-left: 3px solid var(--accent); }
+.stat-card.danger-border { border-left: 3px solid var(--danger); }
+.stat-card.success-border { border-left: 3px solid var(--success); }
+.stat-card.warning-border { border-left: 3px solid var(--warning); }
+
+/* ============================================
+   GRIDS — FULL WIDTH
+   ============================================ */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+.grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+
+/* ============================================
+   TABLES
+   ============================================ */
+.table-container { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  font-family: var(--font-display); font-size: 0.65rem; font-weight: 600;
+  color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px;
+  padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid var(--border);
+  cursor: pointer; user-select: none; white-space: nowrap;
+}
+thead th:hover { color: var(--text-secondary); }
+thead th.sorted { color: var(--accent); }
+tbody tr { border-bottom: 1px solid var(--border); transition: var(--transition); }
+tbody tr:hover { background: var(--bg-card-hover); }
+tbody td { padding: 0.75rem 1rem; font-size: 0.85rem; white-space: nowrap; }
+.td-muted { color: var(--text-secondary); }
+
+/* ============================================
+   DATE FILTER BAR
+   ============================================ */
+.date-filter-bar { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.date-filter-btn {
+  padding: 0.45rem 1rem; border: 1px solid var(--border); border-radius: 20px;
+  background: transparent; color: var(--text-secondary); font-family: var(--font-body);
+  font-size: 0.78rem; font-weight: 500; cursor: pointer; transition: var(--transition);
+}
+.date-filter-btn:hover { border-color: var(--border-hover); color: var(--text-primary); }
+.date-filter-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+.date-range-inputs { display: none; align-items: center; gap: 0.5rem; margin-left: 0.5rem; }
+.date-range-inputs.visible { display: flex; }
+.date-range-inputs input[type="date"] {
+  padding: 0.4rem 0.7rem; background: var(--bg-input); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text-primary); font-family: var(--font-body); font-size: 0.8rem;
+}
+.date-range-inputs input[type="date"]:focus { outline: none; border-color: var(--accent); }
+
+/* ============================================
+   EMAIL LIST WITH REPLY
+   ============================================ */
+.email-item {
+  border-bottom: 1px solid var(--border); transition: var(--transition);
+}
+.email-item:last-child { border-bottom: none; }
+.email-item.handled { opacity: 0.4; }
+.email-item.handled .email-sender { text-decoration: line-through; }
+
+.email-row {
+  display: flex; align-items: flex-start; gap: 1rem;
+  padding: 1rem 1.25rem; cursor: pointer; transition: var(--transition);
+}
+.email-row:hover { background: var(--bg-card-hover); }
+
+.email-priority { width: 4px; min-height: 40px; border-radius: 2px; flex-shrink: 0; margin-top: 0.2rem; }
+.email-priority.high { background: var(--danger); box-shadow: 0 0 10px var(--danger); }
+.email-priority.medium { background: var(--warning); }
+.email-priority.low { background: var(--success); }
+.email-content { flex: 1; min-width: 0; }
+.email-sender { font-weight: 600; font-size: 0.9rem; margin-bottom: 0.15rem; }
+.email-subject { font-size: 0.85rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.email-preview { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.email-meta { text-align: right; flex-shrink: 0; }
+.email-time { font-size: 0.75rem; color: var(--text-muted); }
+.email-actions { margin-top: 0.5rem; display: flex; gap: 0.4rem; }
+
+/* Reply panel */
+.email-reply-panel {
+  display: none; padding: 1rem 1.25rem 1.25rem 3.5rem;
+  background: var(--bg-input); border-top: 1px solid var(--border);
+  animation: fadeSlideIn 0.3s ease;
+}
+.email-reply-panel.visible { display: block; }
+.reply-suggestion-label {
+  font-size: 0.7rem; font-weight: 600; color: var(--accent);
+  text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem;
+  font-family: var(--font-display);
+}
+.reply-textarea {
+  width: 100%; min-height: 100px; padding: 0.8rem;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  color: var(--text-primary); font-family: var(--font-body); font-size: 0.85rem;
+  resize: vertical; line-height: 1.6;
+}
+.reply-textarea:focus { outline: none; border-color: var(--accent); }
+.reply-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; justify-content: flex-end; }
+
+/* ============================================
+   CALENDAR
+   ============================================ */
+.calendar-event {
+  display: flex; align-items: stretch; gap: 0.75rem; padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.calendar-event:last-child { border-bottom: none; }
+.event-time { font-family: var(--font-display); font-size: 0.68rem; font-weight: 600; color: var(--text-muted); min-width: 65px; padding-top: 0.1rem; letter-spacing: 0.5px; }
+.event-bar { width: 3px; border-radius: 2px; flex-shrink: 0; }
+.event-details { flex: 1; }
+.event-title { font-weight: 600; font-size: 0.82rem; margin-bottom: 0.1rem; }
+.event-location { font-size: 0.72rem; color: var(--text-secondary); }
+
+/* Week view — horizontal columns */
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.75rem;
+}
+.week-col {
+  min-width: 0;
+}
+.week-col-header {
+  font-family: var(--font-display); font-size: 0.6rem; font-weight: 700;
+  color: var(--accent); text-transform: uppercase; letter-spacing: 1px;
+  padding-bottom: 0.4rem; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+.week-col-header.today { color: var(--neon-pink); border-bottom-color: var(--neon-pink); }
+.week-col-date { font-size: 0.7rem; color: var(--text-muted); text-align: center; margin-bottom: 0.5rem; }
+.week-event {
+  background: var(--bg-input); border: 1px solid var(--border); border-radius: 6px;
+  padding: 0.5rem; margin-bottom: 0.4rem; font-size: 0.72rem; border-left: 3px solid var(--accent);
+}
+.week-event-time { font-family: var(--font-display); font-size: 0.58rem; color: var(--text-muted); letter-spacing: 0.5px; }
+.week-event-title { font-weight: 600; font-size: 0.75rem; margin-top: 0.15rem; }
+
+/* Add event form */
+.add-event-form { display: none; padding: 1.25rem; background: var(--bg-input); border-radius: var(--radius-sm); margin-bottom: 1.5rem; animation: fadeSlideIn 0.3s ease; }
+.add-event-form.visible { display: block; }
+.form-row { display: flex; gap: 0.75rem; margin-bottom: 0.75rem; }
+.form-field { flex: 1; }
+.form-field label { display: block; font-size: 0.7rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.3rem; }
+.form-field input, .form-field select {
+  width: 100%; padding: 0.6rem 0.8rem; background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text-primary); font-family: var(--font-body); font-size: 0.85rem;
+}
+.form-field input:focus, .form-field select:focus { outline: none; border-color: var(--accent); }
+
+/* ============================================
+   INSTAGRAM — VISUAL POST CARDS
+   ============================================ */
+.ig-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.ig-tab {
+  padding: 0.5rem 1.2rem; border: 1px solid var(--border); border-radius: 20px;
+  background: transparent; color: var(--text-secondary); font-family: var(--font-body);
+  font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: var(--transition);
+}
+.ig-tab:hover { border-color: var(--border-hover); color: var(--text-primary); }
+.ig-tab.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+.ig-sort-bar { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.sort-btn {
+  padding: 0.4rem 0.85rem; border: 1px solid var(--border); border-radius: 20px;
+  background: transparent; color: var(--text-secondary); font-family: var(--font-body);
+  font-size: 0.75rem; font-weight: 500; cursor: pointer; transition: var(--transition);
+}
+.sort-btn:hover { border-color: var(--border-hover); color: var(--text-primary); }
+.sort-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+.ig-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.25rem;
+}
+
+.ig-post-card {
+  position: relative; border-radius: var(--radius); overflow: hidden;
+  border: 1px solid var(--border); transition: var(--transition);
+  cursor: pointer;
+}
+.ig-post-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+
+.ig-post-image {
+  width: 100%; aspect-ratio: 1; object-fit: cover;
+  background: var(--bg-input); display: block;
+}
+
+/* Gradient overlay on image */
+.ig-post-overlay {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(transparent 0%, rgba(0,0,0,0.85) 100%);
+  padding: 2.5rem 0.85rem 0.85rem;
+}
+
+.ig-post-metrics {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem 0.75rem;
+}
+.ig-metric {
+  display: flex; align-items: center; gap: 0.35rem;
+}
+.ig-metric-icon { font-size: 0.7rem; opacity: 0.8; }
+.ig-metric-val { font-family: var(--font-display); font-size: 0.68rem; font-weight: 700; color: #fff; }
+
+.ig-post-type {
+  position: absolute; top: 0.6rem; left: 0.6rem;
+  font-size: 0.6rem; padding: 0.15rem 0.5rem; border-radius: 10px;
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+  backdrop-filter: blur(8px);
+}
+.ig-post-type.reel { background: rgba(0, 240, 255, 0.25); color: #00f0ff; }
+.ig-post-type.image { background: rgba(170, 68, 255, 0.25); color: #aa44ff; }
+.ig-post-type.carousel { background: rgba(255, 170, 0, 0.25); color: #ffaa00; }
+
+.ig-post-creator {
+  position: absolute; top: 0.6rem; right: 0.6rem;
+  font-size: 0.65rem; padding: 0.2rem 0.5rem; border-radius: 10px;
+  font-weight: 600; backdrop-filter: blur(8px);
+  background: rgba(0,0,0,0.5); color: #fff;
+}
+
+.ig-post-caption {
+  font-size: 0.75rem; color: rgba(255,255,255,0.8); margin-bottom: 0.5rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ============================================
+   NEWS — CLICKABLE
+   ============================================ */
+.news-item {
+  display: flex; align-items: flex-start; gap: 1rem;
+  padding: 1.1rem 1.25rem; border-bottom: 1px solid var(--border);
+  transition: var(--transition); cursor: pointer;
+  text-decoration: none; color: inherit;
+}
+.news-item:hover { background: var(--bg-card-hover); }
+.news-item:last-child { border-bottom: none; }
+.news-source-badge {
+  font-size: 0.6rem; padding: 0.2rem 0.55rem; border-radius: 4px;
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0; margin-top: 0.2rem;
+}
+.news-source-badge.twitter { background: rgba(29, 155, 240, 0.15); color: #1d9bf0; }
+.news-source-badge.reddit { background: rgba(255, 69, 0, 0.15); color: #ff4500; }
+.news-source-badge.hn { background: rgba(255, 102, 0, 0.15); color: #ff6600; }
+.news-source-badge.web { background: var(--accent-dim); color: var(--accent); }
+.news-content { flex: 1; }
+.news-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 0.25rem; line-height: 1.4; }
+.news-summary { font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5; }
+.news-meta { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.4rem; display: flex; gap: 1rem; }
+.news-link-hint { font-size: 0.7rem; color: var(--accent); opacity: 0; transition: var(--transition); margin-left: auto; }
+.news-item:hover .news-link-hint { opacity: 1; }
+
+/* ============================================
+   REFRESH BUTTON
+   ============================================ */
+.refresh-btn {
+  padding: 0.5rem 1rem; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--bg-card); color: var(--text-secondary); font-family: var(--font-body);
+  font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: var(--transition);
+  display: flex; align-items: center; gap: 0.4rem;
+}
+.refresh-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.refresh-btn.spinning .refresh-icon { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.refresh-time { font-size: 0.72rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.4rem; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.status-dot.live { background: var(--success); box-shadow: 0 0 10px var(--success); }
+
+/* ============================================
+   THEME TOGGLE
+   ============================================ */
+.theme-toggle {
+  width: 44px; height: 44px; border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text-muted); background: transparent; border: none; font-size: 1.1rem;
+}
+.theme-toggle:hover { color: var(--text-primary); background: var(--accent-dim); }
+
+/* ============================================
+   TOAST
+   ============================================ */
+.toast-container { position: fixed; top: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; }
+.toast {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 0.85rem 1.25rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;
+  animation: slideInRight 0.3s ease; box-shadow: 0 8px 32px rgba(0,0,0,0.3); max-width: 360px;
+}
+.toast.success { border-left: 3px solid var(--success); }
+.toast.error { border-left: 3px solid var(--danger); }
+.toast.info { border-left: 3px solid var(--accent); }
+@keyframes slideInRight { from { opacity: 0; transform: translateX(100px); } to { opacity: 1; transform: translateX(0); } }
+
+/* ============================================
+   MODAL
+   ============================================ */
+.modal-overlay {
+  position: fixed; inset: 0; background: var(--overlay); z-index: 1000;
+  display: none; align-items: center; justify-content: center; padding: 2rem; backdrop-filter: blur(8px);
+}
+.modal-overlay.visible { display: flex; }
+.modal-content {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+  max-width: 640px; width: 100%; max-height: 80vh; overflow-y: auto; padding: 2rem;
+}
+.modal-close { float: right; background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; line-height: 1; }
+.modal-close:hover { color: var(--text-primary); }
+
+/* ============================================
+   CHART
+   ============================================ */
+.chart-container { position: relative; height: 280px; width: 100%; }
+
+/* ============================================
+   LOADING
+   ============================================ */
+.loading-text { color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 2rem; }
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 1200px) {
+  .week-grid { grid-template-columns: repeat(4, 1fr); }
+  .ig-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+}
+@media (max-width: 1024px) {
+  .grid-2, .grid-2-1 { grid-template-columns: 1fr; }
+  .grid-3, .grid-4 { grid-template-columns: 1fr 1fr; }
+  .week-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 768px) {
+  .sidebar { width: 56px; }
+  .sidebar-logo { display: none; }
+  .main-content { margin-left: 56px; padding: 1rem; width: calc(100% - 56px); }
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+  .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .week-grid { grid-template-columns: repeat(2, 1fr); }
+  .page-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+  .nav-item .tooltip { display: none; }
+}
+@media (max-width: 480px) {
+  .stat-grid { grid-template-columns: 1fr; }
+  .ig-grid { grid-template-columns: 1fr; }
+  .week-grid { grid-template-columns: 1fr; }
+}
+
+@media print {
+  .sidebar, .header-actions, .theme-toggle, .nav-items, .nav-bottom, .toast-container { display: none !important; }
+  .main-content { margin-left: 0 !important; width: 100% !important; }
+  body { background: #fff !important; color: #000 !important; }
+  .card { border: 1px solid #ddd !important; break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ============================================
+     SETUP SCREEN
+     ============================================ -->
+<div id="setup-screen" style="display:none">
+  <div class="setup-container">
+    <div class="setup-logo">COMMAND CENTER</div>
+    <div class="setup-subtitle">Connect your services to get started</div>
+    <div class="setup-progress" id="setup-progress"></div>
+
+    <div class="setup-step active" data-step="0">
+      <h2>STRIPE</h2>
+      <p>Enter your Stripe Secret Key for revenue data. Find it at dashboard.stripe.com/apikeys.</p>
+      <div class="setup-field"><label>Secret Key</label><input type="password" id="setup-stripe-key" placeholder="sk_live_..." autocomplete="off"></div>
+      <div class="setup-nav">
+        <button class="btn btn-ghost" onclick="skipSetupStep()">Skip</button>
+        <button class="btn btn-primary" onclick="nextSetupStep()">Next →</button>
+      </div>
+    </div>
+
+    <div class="setup-step" data-step="1">
+      <h2>GOOGLE</h2>
+      <p>Enter your Google OAuth Client ID and API Key for Gmail and Calendar.</p>
+      <div class="setup-field"><label>OAuth Client ID</label><input type="text" id="setup-google-client-id" placeholder="xxxxx.apps.googleusercontent.com" autocomplete="off"></div>
+      <div class="setup-field"><label>API Key</label><input type="password" id="setup-google-api-key" placeholder="AIza..." autocomplete="off"></div>
+      <div class="setup-nav">
+        <button class="btn btn-secondary" onclick="prevSetupStep()">← Back</button>
+        <button class="btn btn-ghost" onclick="skipSetupStep()">Skip</button>
+        <button class="btn btn-primary" onclick="nextSetupStep()">Next →</button>
+      </div>
+    </div>
+
+    <div class="setup-step" data-step="2">
+      <h2>INSTAGRAM</h2>
+      <p>Enter your Meta long-lived access token and Instagram Business Account ID.</p>
+      <div class="setup-field"><label>Access Token</label><input type="password" id="setup-meta-token" placeholder="EAA..." autocomplete="off"></div>
+      <div class="setup-field"><label>Instagram Business Account ID</label><input type="text" id="setup-ig-account-id" placeholder="17841400..." autocomplete="off"></div>
+      <div class="setup-nav">
+        <button class="btn btn-secondary" onclick="prevSetupStep()">← Back</button>
+        <button class="btn btn-ghost" onclick="skipSetupStep()">Skip</button>
+        <button class="btn btn-primary" onclick="nextSetupStep()">Next →</button>
+      </div>
+    </div>
+
+    <div class="setup-step" data-step="3">
+      <h2>APIFY</h2>
+      <p>Enter your Apify API token for competitor Instagram data.</p>
+      <div class="setup-field"><label>API Token</label><input type="password" id="setup-apify-token" placeholder="apify_api_..." autocomplete="off"></div>
+      <div class="setup-nav">
+        <button class="btn btn-secondary" onclick="prevSetupStep()">← Back</button>
+        <button class="btn btn-ghost" onclick="skipSetupStep()">Skip</button>
+        <button class="btn btn-primary" onclick="nextSetupStep()">Next →</button>
+      </div>
+    </div>
+
+    <div class="setup-step" data-step="4">
+      <h2>AI NEWS</h2>
+      <p>Enter your Tavily API key for AI news from Twitter, Reddit, and Hacker News.</p>
+      <div class="setup-field"><label>Tavily API Key</label><input type="password" id="setup-tavily-key" placeholder="tvly-..." autocomplete="off"></div>
+      <div class="setup-nav">
+        <button class="btn btn-secondary" onclick="prevSetupStep()">← Back</button>
+        <button class="btn btn-primary" onclick="completeSetup()">Launch Dashboard →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================
+     MAIN APP
+     ============================================ -->
+<div id="app">
+  <nav class="sidebar">
+    <div class="sidebar-logo">CC</div>
+    <div class="nav-items">
+      <button class="nav-item active" data-page="overview" onclick="navigate('overview')">⌂<span class="tooltip">Overview</span></button>
+      <button class="nav-item" data-page="stripe" onclick="navigate('stripe')">$<span class="tooltip">Stripe</span></button>
+      <button class="nav-item" data-page="gmail" onclick="navigate('gmail')">✉<span class="tooltip">Gmail</span></button>
+      <button class="nav-item" data-page="calendar" onclick="navigate('calendar')">◈<span class="tooltip">Calendar</span></button>
+      <button class="nav-item" data-page="instagram" onclick="navigate('instagram')">◎<span class="tooltip">Instagram</span></button>
+      <button class="nav-item" data-page="news" onclick="navigate('news')">⚡<span class="tooltip">AI News</span></button>
+    </div>
+    <div class="nav-bottom">
+      <button class="nav-item" data-page="settings" onclick="navigate('settings')">⚙<span class="tooltip">Settings</span></button>
+      <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">◐</button>
+    </div>
+  </nav>
+
+  <div class="main-content">
+
+    <!-- ========================================
+         OVERVIEW PAGE
+         ======================================== -->
+    <div class="page active" id="page-overview">
+      <div class="page-header">
+        <div>
+          <div class="page-title">COMMAND CENTER</div>
+          <div class="page-subtitle" id="overview-date"></div>
+        </div>
+        <div class="header-actions">
+          <span class="refresh-time"><span class="status-dot live"></span> Last refresh: <span id="last-refresh">—</span></span>
+          <button class="refresh-btn" id="refresh-btn" onclick="refreshAll()">
+            <span class="refresh-icon">↻</span> Refresh
+          </button>
+        </div>
+      </div>
+
+      <!-- Revenue Stats -->
+      <div class="stat-grid">
+        <div class="stat-card accent-border">
+          <div class="stat-label">Today's Revenue</div>
+          <div class="stat-value" id="ov-revenue">$0</div>
+          <div class="stat-change positive" id="ov-revenue-change">↑ 0% vs yesterday</div>
+        </div>
+        <div class="stat-card success-border">
+          <div class="stat-label">Net Revenue (MTD)</div>
+          <div class="stat-value" id="ov-net-revenue">$0</div>
+          <div class="stat-change positive" id="ov-net-change">↑ 0% vs last month</div>
+        </div>
+        <div class="stat-card danger-border">
+          <div class="stat-label">Refunds / Chargebacks</div>
+          <div class="stat-value" id="ov-refunds">0</div>
+          <div class="stat-change" id="ov-refund-status" style="color: var(--success)">✓ None to address</div>
+        </div>
+        <div class="stat-card warning-border">
+          <div class="stat-label">Payments Today</div>
+          <div class="stat-value" id="ov-payments">0</div>
+          <div class="stat-change" id="ov-payments-change"></div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Priority Emails -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Priority Emails</div>
+            <span class="card-badge badge-danger" id="ov-email-count">0 urgent</span>
+          </div>
+          <div id="ov-emails"><div class="loading-text">Connect Gmail to see priority emails</div></div>
+          <div style="margin-top: 1rem; text-align: center;">
+            <button class="btn btn-ghost btn-sm" onclick="navigate('gmail')">View all emails →</button>
+          </div>
+        </div>
+
+        <!-- Today's Schedule -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Today's Schedule</div>
+            <span class="card-badge badge-info" id="ov-event-count">0 events</span>
+          </div>
+          <div id="ov-calendar"><div class="loading-text">Connect Google Calendar to see events</div></div>
+          <div style="margin-top: 1rem; text-align: center;">
+            <button class="btn btn-ghost btn-sm" onclick="navigate('calendar')">View full calendar →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Visual Posts Row: Yesterday + Competitor Outliers -->
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Recent Posts</div>
+          </div>
+          <div id="ov-post" style="display:flex;gap:1rem;flex-wrap:wrap;"><div class="loading-text" style="width:100%">Loading your recent posts...</div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Competitor Outliers</div>
+          </div>
+          <div id="ov-competitors" style="display: flex; gap: 1rem; flex-wrap: wrap;"><div class="loading-text" style="width:100%">Loading competitor data... (takes ~30s)</div></div>
+        </div>
+      </div>
+
+      <!-- AI News -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Top AI News</div>
+        </div>
+        <div id="ov-news"><div class="loading-text">Connect Tavily to see AI news</div></div>
+      </div>
+    </div>
+
+    <!-- ========================================
+         STRIPE PAGE
+         ======================================== -->
+    <div class="page" id="page-stripe">
+      <div class="page-header">
+        <div>
+          <div class="page-title">STRIPE</div>
+          <div class="page-subtitle">Revenue, transactions, and financial overview</div>
+        </div>
+        <div class="header-actions">
+          <button class="refresh-btn" onclick="loadStripeData()"><span class="refresh-icon">↻</span> Refresh</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportTable('stripe-table')">⎘ Export</button>
+        </div>
+      </div>
+
+      <div class="date-filter-bar" id="stripe-date-filter">
+        <button class="date-filter-btn active" onclick="setDateFilter('stripe', 'today', this)">Today</button>
+        <button class="date-filter-btn" onclick="setDateFilter('stripe', '7d', this)">Last 7 days</button>
+        <button class="date-filter-btn" onclick="setDateFilter('stripe', 'month', this)">This month</button>
+        <button class="date-filter-btn" onclick="setDateFilter('stripe', '30d', this)">Last 30 days</button>
+        <button class="date-filter-btn" onclick="setDateFilter('stripe', 'custom', this)">Custom</button>
+        <div class="date-range-inputs" id="stripe-custom-range">
+          <input type="date" id="stripe-date-from">
+          <span style="color: var(--text-muted); font-size: 0.8rem;">to</span>
+          <input type="date" id="stripe-date-to">
+          <button class="btn btn-primary btn-sm" onclick="applyCustomDateFilter('stripe')">Apply</button>
+        </div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card accent-border"><div class="stat-label">Gross Revenue</div><div class="stat-value" id="stripe-gross">$0</div></div>
+        <div class="stat-card warning-border"><div class="stat-label">Stripe Fees</div><div class="stat-value" id="stripe-fees">$0</div></div>
+        <div class="stat-card success-border"><div class="stat-label">Net Revenue</div><div class="stat-value" id="stripe-net">$0</div></div>
+        <div class="stat-card"><div class="stat-label">Payments</div><div class="stat-value" id="stripe-count">0</div></div>
+        <div class="stat-card danger-border"><div class="stat-label">Refunds</div><div class="stat-value" id="stripe-refunds">$0</div></div>
+        <div class="stat-card danger-border"><div class="stat-label">Chargebacks</div><div class="stat-value" id="stripe-chargebacks">0</div></div>
+      </div>
+
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-header"><div class="card-title">Revenue Trend</div></div>
+        <div class="chart-container"><canvas id="revenue-chart"></canvas></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title">Recent Transactions</div></div>
+        <div class="table-container">
+          <table id="stripe-table">
+            <thead><tr>
+              <th onclick="sortTable('stripe-table', 0)">Date <span class="sort-icon">↕</span></th>
+              <th onclick="sortTable('stripe-table', 1)">Description <span class="sort-icon">↕</span></th>
+              <th onclick="sortTable('stripe-table', 2)">Customer <span class="sort-icon">↕</span></th>
+              <th onclick="sortTable('stripe-table', 3)">Amount <span class="sort-icon">↕</span></th>
+              <th onclick="sortTable('stripe-table', 4)">Fee <span class="sort-icon">↕</span></th>
+              <th onclick="sortTable('stripe-table', 5)">Net <span class="sort-icon">↕</span></th>
+              <th onclick="sortTable('stripe-table', 6)">Status <span class="sort-icon">↕</span></th>
+            </tr></thead>
+            <tbody id="stripe-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================
+         GMAIL PAGE — WITH REPLY
+         ======================================== -->
+    <div class="page" id="page-gmail">
+      <div class="page-header">
+        <div>
+          <div class="page-title">PRIORITY INBOX</div>
+          <div class="page-subtitle">Emails that need your attention — click to reply</div>
+        </div>
+        <div class="header-actions">
+          <button class="refresh-btn" onclick="loadGmailData()"><span class="refresh-icon">↻</span> Refresh</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleHandledEmails()">Toggle handled</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div id="gmail-emails"><div class="loading-text">Connect Gmail to see priority emails</div></div>
+      </div>
+    </div>
+
+    <!-- ========================================
+         CALENDAR PAGE — HORIZONTAL WEEK
+         ======================================== -->
+    <div class="page" id="page-calendar">
+      <div class="page-header">
+        <div>
+          <div class="page-title">CALENDAR</div>
+          <div class="page-subtitle" id="calendar-date-label"></div>
+        </div>
+        <div class="header-actions">
+          <button class="refresh-btn" onclick="loadCalendarData()"><span class="refresh-icon">↻</span> Refresh</button>
+          <button class="btn btn-primary btn-sm" onclick="toggleAddEvent()">+ Add Event</button>
+        </div>
+      </div>
+
+      <div class="add-event-form" id="add-event-form">
+        <div class="form-row">
+          <div class="form-field"><label>Event Title</label><input type="text" id="new-event-title" placeholder="Meeting with..."></div>
+        </div>
+        <div class="form-row">
+          <div class="form-field"><label>Date</label><input type="date" id="new-event-date"></div>
+          <div class="form-field"><label>Start Time</label><input type="time" id="new-event-start"></div>
+          <div class="form-field"><label>End Time</label><input type="time" id="new-event-end"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-field"><label>Location (optional)</label><input type="text" id="new-event-location" placeholder="Zoom, office, etc."></div>
+          <div class="form-field"><label>Invite Emails (comma-separated)</label><input type="text" id="new-event-invites" placeholder="john@example.com, jane@example.com"></div>
+        </div>
+        <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+          <button class="btn btn-secondary btn-sm" onclick="toggleAddEvent()">Cancel</button>
+          <button class="btn btn-primary btn-sm" onclick="createEvent()">Create Event</button>
+        </div>
+      </div>
+
+      <!-- Today — compact -->
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-header">
+          <div class="card-title">Today</div>
+          <span class="card-badge badge-info" id="cal-today-count">0 events</span>
+        </div>
+        <div id="cal-today-events"><div class="loading-text">Connect Google Calendar to see events</div></div>
+      </div>
+
+      <!-- This Week — horizontal grid -->
+      <div class="card">
+        <div class="card-header"><div class="card-title">This Week</div></div>
+        <div class="week-grid" id="cal-week-grid"></div>
+      </div>
+    </div>
+
+    <!-- ========================================
+         INSTAGRAM PAGE — TABBED + VISUAL
+         ======================================== -->
+    <div class="page" id="page-instagram">
+      <div class="page-header">
+        <div>
+          <div class="page-title">INSTAGRAM</div>
+          <div class="page-subtitle">Your content performance & competitor intel</div>
+        </div>
+        <div class="header-actions">
+          <button class="refresh-btn" onclick="loadInstagramData()"><span class="refresh-icon">↻</span> Refresh</button>
+        </div>
+      </div>
+
+      <!-- Tabs: My Posts | Competitors -->
+      <div class="ig-tabs" id="ig-tabs">
+        <button class="ig-tab active" onclick="switchIgTab('my', this)">My Posts</button>
+        <button class="ig-tab" onclick="switchIgTab('all-comp', this)">All Competitors</button>
+        <!-- Individual competitor tabs added dynamically -->
+      </div>
+
+      <!-- Sort bar -->
+      <div class="ig-sort-bar" id="ig-sort-bar">
+        <button class="sort-btn active" onclick="sortIgCards('recent', this)">Most Recent</button>
+        <button class="sort-btn" onclick="sortIgCards('views', this)">Most Viewed</button>
+        <button class="sort-btn" onclick="sortIgCards('likes', this)">Most Liked</button>
+        <button class="sort-btn" onclick="sortIgCards('saves', this)">Most Saved</button>
+      </div>
+
+      <!-- Visual grid -->
+      <div class="ig-grid" id="ig-grid"></div>
+    </div>
+
+    <!-- ========================================
+         AI NEWS PAGE — CLICKABLE
+         ======================================== -->
+    <div class="page" id="page-news">
+      <div class="page-header">
+        <div>
+          <div class="page-title">AI NEWS</div>
+          <div class="page-subtitle">Today's top stories — click to read the source</div>
+        </div>
+        <div class="header-actions">
+          <button class="refresh-btn" onclick="loadNewsData()"><span class="refresh-icon">↻</span> Refresh</button>
+        </div>
+      </div>
+      <div class="card">
+        <div id="news-list"><div class="loading-text">Connect Tavily to see AI news</div></div>
+      </div>
+    </div>
+
+    <!-- ========================================
+         SETTINGS PAGE
+         ======================================== -->
+    <div class="page" id="page-settings">
+      <div class="page-header">
+        <div><div class="page-title">SETTINGS</div><div class="page-subtitle">Proxy status and preferences</div></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Proxy Status</div></div>
+          <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.5rem;">All API keys are managed by Claude Code via the local proxy server.</p>
+          <div id="proxy-status" style="display:flex;flex-direction:column;gap:0.75rem;"></div>
+          <div style="margin-top: 1.5rem;">
+            <button class="btn btn-primary btn-sm" onclick="checkProxyStatus()">Check Status</button>
+          </div>
+          <div style="margin-top: 1.5rem; padding: 1rem; background: var(--bg-input); border-radius: var(--radius-sm);">
+            <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem;">Start Proxy</div>
+            <code style="font-size: 0.8rem; color: var(--accent);">node proxy.js</code>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div class="card-title">Competitors</div></div>
+          <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">Instagram handles (one per line, without @)</p>
+          <textarea id="settings-competitors" rows="7" style="width:100%;padding:0.8rem;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-family:var(--font-body);font-size:0.85rem;resize:vertical;" placeholder="competitor1placeholder="chase.h.ai&#10;jens.heitmann&#10;albert.olgaard&#10;cooper.simson&#10;justyn.ai"#10;competitor2placeholder="chase.h.ai&#10;jens.heitmann&#10;albert.olgaard&#10;cooper.simson&#10;justyn.ai"#10;competitor3"></textarea>
+          <button class="btn btn-primary btn-sm" style="margin-top: 0.75rem;" onclick="saveCompetitors()">Save Competitors</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal-content" id="modal-content">
+    <button class="modal-close" onclick="closeModal()">&times;</button>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================
+   CONFIG & STATE
+   ============================================ */
+const CONFIG = {
+  STORAGE_PREFIX: 'cc_',
+  PROXY: 'http://localhost:8787',
+  COMPETITORS: [],
+};
+
+let state = {
+  currentPage: 'overview',
+  stripeFilter: 'today',
+  stripeCustomFrom: null, stripeCustomTo: null,
+  handledEmails: new Set(JSON.parse(localStorage.getItem('cc_handled_emails') || '[]')),
+  showHandled: false,
+  igTab: 'my',
+  igSort: 'recent',
+};
+
+// Data caches
+window._myPosts = [];
+window._compPosts = [];
+window._allNews = [];
+window._allEmails = [];
+
+/* ============================================
+   STORAGE
+   ============================================ */
+function store(k, v) { localStorage.setItem(CONFIG.STORAGE_PREFIX + k, JSON.stringify(v)); }
+function retrieve(k) { const v = localStorage.getItem(CONFIG.STORAGE_PREFIX + k); return v ? JSON.parse(v) : null; }
+function getKey(n) { return retrieve('key_' + n) || ''; }
+function setKey(n, v) { store('key_' + n, v); }
+
+/* ============================================
+   SETUP FLOW
+   ============================================ */
+let setupStep = 0;
+const totalSteps = 5;
+
+async function initSetup() {
+  // Proxy handles all API keys — skip setup, go straight to dashboard
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('app').classList.add('visible');
+  initDashboard();
+  return;
+
+  // Legacy fallback (kept but unreachable)
+  if (retrieve('setup_complete')) {
+    document.getElementById('setup-screen').style.display = 'none';
+    document.getElementById('app').classList.add('visible');
+    loadSettingsValues();
+    initDashboard();
+    return;
+  }
+  const progress = document.getElementById('setup-progress');
+  for (let i = 0; i < totalSteps; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'setup-dot' + (i === 0 ? ' active' : '');
+    progress.appendChild(dot);
+  }
+}
+
+function updateSetupProgress() {
+  document.querySelectorAll('.setup-dot').forEach((dot, i) => {
+    dot.className = 'setup-dot';
+    if (i < setupStep) dot.classList.add('completed');
+    if (i === setupStep) dot.classList.add('active');
+  });
+}
+
+function nextSetupStep() { saveCurrentStepKeys(); setupStep++; if (setupStep >= totalSteps) { completeSetup(); return; } showSetupStep(setupStep); }
+function prevSetupStep() { if (setupStep > 0) { setupStep--; showSetupStep(setupStep); } }
+function skipSetupStep() { setupStep++; if (setupStep >= totalSteps) { completeSetup(); return; } showSetupStep(setupStep); }
+
+function showSetupStep(step) {
+  document.querySelectorAll('.setup-step').forEach(s => s.classList.remove('active'));
+  document.querySelector(`.setup-step[data-step="${step}"]`).classList.add('active');
+  updateSetupProgress();
+}
+
+function saveCurrentStepKeys() {
+  const map = {
+    0: [['stripe', 'setup-stripe-key']],
+    1: [['google_client_id', 'setup-google-client-id'], ['google_api_key', 'setup-google-api-key']],
+    2: [['meta_token', 'setup-meta-token'], ['ig_account_id', 'setup-ig-account-id']],
+    3: [['apify_token', 'setup-apify-token']],
+    4: [['tavily', 'setup-tavily-key']],
+  };
+  (map[setupStep] || []).forEach(([k, id]) => {
+    const v = document.getElementById(id).value.trim();
+    if (v) setKey(k, v);
+  });
+}
+
+function completeSetup() {
+  saveCurrentStepKeys();
+  store('setup_complete', true);
+  store('competitors', CONFIG.COMPETITORS);
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('app').classList.add('visible');
+  loadSettingsValues();
+  initDashboard();
+  showToast('Dashboard ready! Refreshing data...', 'success');
+}
+
+/* ============================================
+   NAVIGATION
+   ============================================ */
+function navigate(page) {
+  state.currentPage = page;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item[data-page]').forEach(n => n.classList.remove('active'));
+  const el = document.getElementById('page-' + page);
+  if (el) el.classList.add('active');
+  const nav = document.querySelector(`.nav-item[data-page="${page}"]`);
+  if (nav) nav.classList.add('active');
+}
+
+/* ============================================
+   THEME
+   ============================================ */
+function toggleTheme() {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  store('theme', next);
+  if (window.revenueChart) renderRevenueChart();
+}
+function loadTheme() { const s = retrieve('theme'); if (s) document.documentElement.setAttribute('data-theme', s); }
+
+/* ============================================
+   TOAST
+   ============================================ */
+function showToast(msg, type = 'info') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(100px)'; t.style.transition = '0.3s'; setTimeout(() => t.remove(), 300); }, 4000);
+}
+
+/* ============================================
+   HELPERS
+   ============================================ */
+function formatDate(d) { return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }); }
+function formatTime(d) { return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }); }
+function formatCurrency(cents) { return '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function formatNumber(n) { if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M'; if (n >= 1000) return (n / 1000).toFixed(1) + 'K'; return n.toLocaleString(); }
+function escapeHtml(s) { const d = document.createElement('div'); d.appendChild(document.createTextNode(s || '')); return d.innerHTML; }
+
+function getDateRange(filter) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const tomorrow = new Date(today.getTime() + 86400000);
+  switch (filter) {
+    case 'today': return { from: today, to: tomorrow };
+    case '7d': return { from: new Date(today.getTime() - 6 * 86400000), to: tomorrow };
+    case 'month': return { from: new Date(today.getFullYear(), today.getMonth(), 1), to: tomorrow };
+    case '30d': return { from: new Date(today.getTime() - 29 * 86400000), to: tomorrow };
+    case 'custom':
+      return {
+        from: state.stripeCustomFrom ? new Date(state.stripeCustomFrom) : today,
+        to: state.stripeCustomTo ? new Date(new Date(state.stripeCustomTo).getTime() + 86400000) : tomorrow,
+      };
+    default: return { from: today, to: tomorrow };
+  }
+}
+
+/* ============================================
+   REFRESH
+   ============================================ */
+function refreshAll() {
+  const btn = document.getElementById('refresh-btn');
+  btn.classList.add('spinning');
+  loadStripeData();
+  loadGmailData();
+  loadCalendarData();
+  loadInstagramData();
+  loadNewsData();
+  document.getElementById('last-refresh').textContent = formatTime(new Date());
+  setTimeout(() => btn.classList.remove('spinning'), 1500);
+  showToast('All data refreshed', 'success');
+}
+
+/* ============================================
+   DATE FILTER
+   ============================================ */
+function setDateFilter(section, filter, btn) {
+  state[section + 'Filter'] = filter;
+  btn.closest('.date-filter-bar').querySelectorAll('.date-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const cr = document.getElementById(section + '-custom-range');
+  if (filter === 'custom') { cr.classList.add('visible'); } else { cr.classList.remove('visible'); if (section === 'stripe') loadStripeData(); }
+}
+
+function applyCustomDateFilter(section) {
+  const from = document.getElementById(section + '-date-from').value;
+  const to = document.getElementById(section + '-date-to').value;
+  if (!from || !to) { showToast('Select both dates', 'error'); return; }
+  state[section + 'CustomFrom'] = from;
+  state[section + 'CustomTo'] = to;
+  if (section === 'stripe') loadStripeData();
+}
+
+/* ============================================
+   TABLE SORT & EXPORT
+   ============================================ */
+function sortTable(tableId, col) {
+  const table = document.getElementById(tableId);
+  const tbody = table.querySelector('tbody');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  const th = table.querySelectorAll('thead th')[col];
+  const asc = !th.classList.contains('sorted') || th.dataset.dir === 'desc';
+  table.querySelectorAll('thead th').forEach(h => { h.classList.remove('sorted'); delete h.dataset.dir; });
+  th.classList.add('sorted'); th.dataset.dir = asc ? 'asc' : 'desc';
+  rows.sort((a, b) => {
+    let aV = a.cells[col]?.textContent.trim() || '', bV = b.cells[col]?.textContent.trim() || '';
+    const aN = parseFloat(aV.replace(/[$,%,K,M,s]/g, '')), bN = parseFloat(bV.replace(/[$,%,K,M,s]/g, ''));
+    if (!isNaN(aN) && !isNaN(bN)) return asc ? aN - bN : bN - aN;
+    return asc ? aV.localeCompare(bV) : bV.localeCompare(aV);
+  });
+  rows.forEach(r => tbody.appendChild(r));
+}
+
+function exportTable(tableId) {
+  const table = document.getElementById(tableId);
+  if (!table) return;
+  let csv = '';
+  table.querySelectorAll('tr').forEach(r => {
+    csv += Array.from(r.querySelectorAll('th, td')).map(c => '"' + c.textContent.replace(/"/g, '""').trim() + '"').join(',') + '\n';
+  });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = tableId + '_' + new Date().toISOString().split('T')[0] + '.csv';
+  a.click();
+  showToast('Exported as CSV', 'success');
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modal-overlay') && !e.target.classList.contains('modal-close')) return;
+  document.getElementById('modal-overlay').classList.remove('visible');
+}
+
+
+/* ============================================
+   INIT
+   ============================================ */
+async function initDashboard() {
+  document.getElementById('overview-date').textContent = formatDate(new Date());
+  document.getElementById('calendar-date-label').textContent = formatDate(new Date());
+  document.getElementById('last-refresh').textContent = formatTime(new Date());
+
+  // Load config from proxy to know which services are enabled
+  try {
+    const health = await api('/api/health');
+    const svc = health.services || {};
+    window._userEmail = '';
+    window._userHandle = 'me';
+    CONFIG.COMPETITORS = health.competitors || [];
+
+    // Only load enabled services
+    if (svc.stripe) loadStripeData();
+    if (svc.gmail) loadGmailData();
+    if (svc.calendar) loadCalendarData();
+    if (svc.instagram) loadInstagramData();
+    if (svc.news) loadNewsData();
+
+    // Hide sections for disabled services
+    if (!svc.stripe) { document.querySelectorAll('[data-page="stripe"]').forEach(el => el.style.display = 'none'); }
+    if (!svc.gmail) { document.querySelectorAll('[data-page="gmail"]').forEach(el => el.style.display = 'none'); }
+    if (!svc.calendar) { document.querySelectorAll('[data-page="calendar"]').forEach(el => el.style.display = 'none'); }
+    if (!svc.instagram) { document.querySelectorAll('[data-page="instagram"]').forEach(el => el.style.display = 'none'); }
+    if (!svc.news) { document.querySelectorAll('[data-page="news"]').forEach(el => el.style.display = 'none'); }
+  } catch (e) {
+    showToast('Could not connect to proxy. Run: node proxy.js', 'error');
+  }
+}
+
+loadTheme();
+document.addEventListener('DOMContentLoaded', () => initSetup());
+
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  switch(e.key) {
+    case '1': navigate('overview'); break;
+    case '2': navigate('stripe'); break;
+    case '3': navigate('gmail'); break;
+    case '4': navigate('calendar'); break;
+    case '5': navigate('instagram'); break;
+    case '6': navigate('news'); break;
+    case 't': toggleTheme(); break;
+    case 'r': refreshAll(); break;
+  }
+});
+
+/* ============================================
+   PROXY-POWERED DATA LOADING
+   Replaces all placeholder functions with live proxy calls
+   ============================================ */
+const API = CONFIG.PROXY;
+
+async function api(path) {
+  const r = await fetch(API + path);
+  return r.json();
+}
+
+async function apiPost(path, body) {
+  const r = await fetch(API + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  return r.json();
+}
+
+// Override: STRIPE
+async function loadStripeData() {
+  try {
+    const filter = state.stripeFilter || 'today';
+    let url = `/api/stripe?filter=${filter}`;
+    if (filter === 'custom' && state.stripeCustomFrom && state.stripeCustomTo) {
+      url = `/api/stripe?filter=custom&from=${state.stripeCustomFrom}&to=${state.stripeCustomTo}`;
+    }
+    const d = await api(url);
+    if (d.error) { showToast('Stripe: ' + d.error, 'error'); return; }
+
+    document.getElementById('stripe-gross').textContent = formatCurrency(d.gross);
+    document.getElementById('stripe-fees').textContent = formatCurrency(d.fees);
+    document.getElementById('stripe-net').textContent = formatCurrency(d.net);
+    document.getElementById('stripe-count').textContent = d.chargeCount;
+    document.getElementById('stripe-refunds').textContent = formatCurrency(d.refundAmount);
+    document.getElementById('stripe-chargebacks').textContent = d.disputeCount;
+
+    // Overview
+    document.getElementById('ov-revenue').textContent = formatCurrency(d.gross);
+    document.getElementById('ov-net-revenue').textContent = formatCurrency(d.net);
+    document.getElementById('ov-refunds').textContent = d.refundCount + d.disputeCount;
+    document.getElementById('ov-payments').textContent = d.chargeCount;
+
+    if (d.disputeCount > 0 || d.refundCount > 0) {
+      document.getElementById('ov-refund-status').style.color = 'var(--danger)';
+      document.getElementById('ov-refund-status').textContent = '⚠ ' + (d.disputeCount ? d.disputeCount + ' dispute(s)' : d.refundCount + ' refund(s)');
+    } else {
+      document.getElementById('ov-refund-status').style.color = 'var(--success)';
+      document.getElementById('ov-refund-status').textContent = '✓ None to address';
+    }
+
+    // Transactions table
+    document.getElementById('stripe-tbody').innerHTML = (d.transactions || []).map(t => `<tr>
+      <td class="td-muted">${new Date(t.date).toLocaleDateString()}</td>
+      <td>${escapeHtml(t.description)}</td>
+      <td>${escapeHtml(t.customer || '—')}</td>
+      <td>${formatCurrency(Math.abs(t.amount))}</td>
+      <td class="td-muted">${formatCurrency(t.fee)}</td>
+      <td style="color:var(--${t.type === 'refund' ? 'danger' : 'success'})">${formatCurrency(t.net)}</td>
+      <td><span class="card-badge ${t.type === 'refund' ? 'badge-danger' : 'badge-success'}">${t.type === 'refund' ? 'Refunded' : 'Paid'}</span></td>
+    </tr>`).join('');
+
+    renderRevenueChart(d.transactions);
+  } catch (e) {
+    console.warn('Stripe error:', e);
+    showToast('Stripe: Could not connect to proxy', 'error');
+  }
+}
+
+function renderRevenueChart(transactions) {
+  const ctx = document.getElementById('revenue-chart');
+  if (!ctx) return;
+  if (window.revenueChart) window.revenueChart.destroy();
+  const dk = document.documentElement.getAttribute('data-theme') === 'dark';
+  const accent = dk ? '#00f0ff' : '#0088aa';
+  const grid = dk ? 'rgba(120,120,160,0.1)' : 'rgba(90,90,128,0.1)';
+  const txt = dk ? '#7878a0' : '#5a5a80';
+
+  // Group transactions by day
+  const byDay = {};
+  (transactions || []).forEach(t => {
+    if (t.type !== 'charge') return;
+    const key = new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    byDay[key] = (byDay[key] || 0) + t.amount;
+  });
+
+  const labels = Object.keys(byDay);
+  const data = Object.values(byDay).map(v => v / 100);
+
+  if (labels.length === 0) {
+    // Show empty state
+    labels.push('No data');
+    data.push(0);
+  }
+
+  window.revenueChart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Revenue', data, backgroundColor: accent + '40', borderColor: accent, borderWidth: 1, borderRadius: 4 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => '$' + c.parsed.y.toLocaleString() } } },
+      scales: {
+        x: { grid: { color: grid }, ticks: { color: txt, font: { family: "'Space Grotesk'", size: 10 } } },
+        y: { grid: { color: grid }, ticks: { color: txt, font: { family: "'Space Grotesk'", size: 10 }, callback: v => '$' + v } }
+      }
+    }
+  });
+}
+
+// Override: GMAIL
+async function loadGmailData() {
+  try {
+    const d = await api('/api/gmail?max=15');
+    if (d.error) { showToast('Gmail: ' + d.error, 'error'); return; }
+    window._allEmails = d.emails || [];
+    renderEmailList(document.getElementById('gmail-emails'), window._allEmails, true);
+    renderEmailList(document.getElementById('ov-emails'), window._allEmails.slice(0, 3), false);
+    document.getElementById('ov-email-count').textContent = window._allEmails.length + ' priority';
+  } catch (e) {
+    console.warn('Gmail error:', e);
+    showToast('Gmail: Could not connect to proxy', 'error');
+  }
+}
+
+function renderEmailList(container, emails, withReply) {
+  if (!emails.length) { container.innerHTML = '<div class="loading-text">No priority emails right now</div>'; return; }
+  container.innerHTML = emails.map(e => {
+    const isHandled = state.handledEmails.has(e.id);
+    const pClass = e.priority >= 7 ? 'high' : e.priority >= 3 ? 'medium' : 'low';
+    const fromName = (e.from || '').split('<')[0].trim() || e.from;
+    return `
+      <div class="email-item ${isHandled ? 'handled' : ''}" ${!state.showHandled && isHandled ? 'style="display:none"' : ''} data-email-id="${e.id}">
+        <div class="email-row" onclick="toggleReplyPanel('${e.id}')">
+          <div class="email-priority ${pClass}"></div>
+          <div class="email-content">
+            <div class="email-sender">${escapeHtml(fromName)}</div>
+            <div class="email-subject">${escapeHtml(e.subject)}</div>
+            <div class="email-preview">${escapeHtml(e.snippet)}</div>
+          </div>
+          <div class="email-meta">
+            <div class="email-time">${formatEmailDate(e.date)}</div>
+            <div class="email-actions">
+              <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); toggleHandleEmail('${e.id}')">${isHandled ? '↩ Undo' : '✓ Handled'}</button>
+            </div>
+          </div>
+        </div>
+        ${withReply ? `
+        <div class="email-reply-panel" id="reply-${e.id}">
+          <div class="reply-suggestion-label">AI-Suggested Reply — <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); generateAiReply('${e.id}')">Generate</button></div>
+          <textarea class="reply-textarea" id="reply-text-${e.id}" placeholder="Click Generate for an AI-suggested reply, or write your own..."></textarea>
+          <div class="reply-actions">
+            <button class="btn btn-secondary btn-sm" onclick="toggleReplyPanel('${e.id}')">Cancel</button>
+            <button class="btn btn-primary btn-sm" onclick="sendReply('${e.id}')">Send Reply</button>
+          </div>
+        </div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+function formatEmailDate(dateStr) {
+  try {
+    const d = new Date(dateStr);
+    const now = new Date();
+    if (d.toDateString() === now.toDateString()) return formatTime(d);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  } catch { return dateStr || ''; }
+}
+
+function toggleReplyPanel(id) {
+  const panel = document.getElementById('reply-' + id);
+  if (!panel) return;
+  const isVis = panel.classList.contains('visible');
+  document.querySelectorAll('.email-reply-panel').forEach(p => p.classList.remove('visible'));
+  if (!isVis) panel.classList.add('visible');
+}
+
+async function generateAiReply(id) {
+  const email = window._allEmails.find(e => e.id === id);
+  if (!email) return;
+
+  const textarea = document.getElementById('reply-text-' + id);
+  textarea.value = 'Loading full conversation and generating reply...';
+
+  // Fetch FULL thread for context
+  let threadMessages = [];
+  if (email.threadId) {
+    try {
+      const thread = await api('/api/gmail/thread?threadId=' + email.threadId);
+      if (thread.messages && thread.messages.length > 0) {
+        threadMessages = thread.messages;
+      }
+    } catch {}
+  }
+
+  // Build full conversation context
+  const fromName = (email.from || '').split('<')[0].trim();
+  const lastMsg = threadMessages.length > 0 ? threadMessages[threadMessages.length - 1] : null;
+  const lastBody = lastMsg ? lastMsg.body : (email.body || email.snippet);
+  const fullThread = threadMessages.map(m => {
+    const sender = (m.from || '').split('<')[0].trim();
+    return `--- ${sender} (${m.date}) ---\n${m.body}`;
+  }).join('\n\n');
+
+  // Analyze the full thread to generate a contextual reply
+  const subject = email.subject || '';
+  const lower = (subject + ' ' + lastBody + ' ' + fullThread).toLowerCase();
+
+  // Determine what the last message is asking/saying
+  let reply = '';
+  const isFromMe = (lastMsg?.from || '').includes(window._userEmail || '');
+  const threadCount = threadMessages.length;
+
+  if (isFromMe) {
+    // Last message was from you — probably waiting for their reply, shouldn't suggest a reply
+    reply = `[The last message in this thread was from you. No reply needed unless they respond.]`;
+  } else if (lower.includes('decided not to') || lower.includes('not interested') || lower.includes('moving on') || lower.includes('cancel') || lower.includes('not move forward')) {
+    reply = `Hey ${fromName},\n\nAppreciate the honesty — no hard feelings at all. If anything changes down the road or you need help with anything, my door's always open.\n\nWishing you the best,\n" + (window._userName || "Me") + "`;
+  } else if (lower.includes('confirm') || lower.includes('still on') || lower.includes('are we good')) {
+    reply = `Hey ${fromName},\n\nYep, we're all set. See you then.\n\n" + (window._userName || "Me") + "`;
+  } else if (lower.includes('proposal') || lower.includes('partnership') || lower.includes('move forward') || lower.includes('close') || lower.includes('ready to')) {
+    reply = `Hey ${fromName},\n\nLet's make it happen. I'll get everything finalized and sent your way within 24 hours. If there's anything specific you want included, shoot it over now so I can build it in.\n\nTalk soon,\n" + (window._userName || "Me") + "`;
+  } else if (lower.includes('how much') || lower.includes('pricing') || lower.includes('cost') || lower.includes('price') || lower.includes('rate')) {
+    reply = `Hey ${fromName},\n\nGood question. Let me put together the right option for your situation — I don't do one-size-fits-all pricing. I'll follow up with the details shortly.\n\n" + (window._userName || "Me") + "`;
+  } else if (lower.includes('question') || lower.includes('curious') || lower.includes('wondering') || lower.includes('advice') || lower.includes('what do you think') || lower.includes('your take')) {
+    // Try to identify the actual question from the last message
+    const lastLines = lastBody.split('\n').filter(l => l.includes('?') || l.length > 20);
+    const questionContext = lastLines.slice(0, 3).join(' ').substring(0, 200);
+    reply = `Hey ${fromName},\n\n${questionContext ? 'Re: "' + questionContext.trim() + '"\n\n' : ''}Solid question. Here's my take:\n\n[Your answer here]\n\nLet me know if that helps or if you want to dig deeper on anything.\n\n" + (window._userName || "Me") + "`;
+  } else if (lower.includes('thanks') || lower.includes('thank you') || lower.includes('appreciate') || lower.includes('game changer') || lower.includes('amazing') || lower.includes('love')) {
+    reply = `Hey ${fromName},\n\nReally appreciate that — means a lot. Keep pushing forward and don't hesitate to reach out if you hit any roadblocks.\n\n" + (window._userName || "Me") + "`;
+  } else if (lower.includes('dispute') || lower.includes('chargeback') || lower.includes('refund')) {
+    reply = `Noted — I'll pull together the delivery records and any relevant correspondence, and submit the evidence before the deadline. Will handle this today.`;
+  } else if (lower.includes('fail') || lower.includes('error') || lower.includes('broken') || lower.includes('deploy') || lower.includes('bug') || lower.includes('issue')) {
+    reply = `On it — I'll investigate and get this resolved. Will update you as soon as it's fixed.`;
+  } else if (lower.includes('meeting') || lower.includes('call') || lower.includes('schedule') || lower.includes('chat') || lower.includes('connect')) {
+    reply = `Hey ${fromName},\n\nLet's do it. Here's my calendar link — grab whatever slot works best for you: [calendar link]\n\nTalk soon,\n" + (window._userName || "Me") + "`;
+  } else if (lower.includes('invoice') || lower.includes('payment') || lower.includes('paid') || lower.includes('billing')) {
+    reply = `Hey ${fromName},\n\nThanks for flagging this. Let me look into the billing details and get back to you with an update today.\n\n" + (window._userName || "Me") + "`;
+  } else {
+    // Generic but contextual — include a reference to what they said
+    const lastSnippet = lastBody.substring(0, 150).trim();
+    reply = `Hey ${fromName},\n\nThanks for the message. ${lastSnippet.length > 30 ? 'I read through everything' : 'Noted'} — let me review and get back to you with a proper response.\n\n" + (window._userName || "Me") + "`;
+  }
+
+  // Show thread context above the reply for reference
+  if (threadMessages.length > 1) {
+    const threadSummary = threadMessages.slice(-3).map(m => {
+      const sender = (m.from || '').split('<')[0].trim();
+      const preview = (m.body || '').substring(0, 100).replace(/\n/g, ' ');
+      return `${sender}: "${preview}..."`;
+    }).join('\n');
+    textarea.value = reply + '\n\n--- Thread context (' + threadCount + ' messages) ---\n' + threadSummary;
+  } else {
+    textarea.value = reply;
+  }
+}
+
+async function sendReply(id) {
+  const email = window._allEmails.find(e => e.id === id);
+  const text = document.getElementById('reply-text-' + id)?.value;
+  if (!text?.trim()) { showToast('Reply is empty', 'error'); return; }
+  if (!email) return;
+
+  try {
+    const replyTo = (email.from || '').match(/<(.+)>/)?.[1] || email.from;
+    const result = await apiPost('/api/gmail/send', {
+      to: replyTo,
+      subject: 'Re: ' + (email.subject || ''),
+      message: text,
+      threadId: email.threadId,
+    });
+    if (result.error) { showToast('Send failed: ' + result.error, 'error'); return; }
+    showToast('Reply sent!', 'success');
+    toggleReplyPanel(id);
+    toggleHandleEmail(id);
+  } catch (e) {
+    showToast('Send failed', 'error');
+  }
+}
+
+function toggleHandleEmail(id) {
+  if (state.handledEmails.has(id)) state.handledEmails.delete(id);
+  else state.handledEmails.add(id);
+  localStorage.setItem('cc_handled_emails', JSON.stringify([...state.handledEmails]));
+  renderEmailList(document.getElementById('gmail-emails'), window._allEmails, true);
+  renderEmailList(document.getElementById('ov-emails'), window._allEmails.slice(0, 3), false);
+}
+
+function toggleHandledEmails() {
+  state.showHandled = !state.showHandled;
+  document.querySelectorAll('.email-item.handled').forEach(el => { el.style.display = state.showHandled ? '' : 'none'; });
+}
+
+// Override: CALENDAR
+async function loadCalendarData() {
+  try {
+    const d = await api('/api/calendar?days=7');
+    if (d.error) { showToast('Calendar: ' + d.error, 'error'); return; }
+
+    const events = d.events || [];
+    const today = new Date().toISOString().split('T')[0];
+    const todayEvents = events.filter(e => (e.start || '').startsWith(today));
+    const colors = ['var(--neon-cyan)', 'var(--neon-pink)', 'var(--neon-green)', 'var(--neon-orange)', 'var(--neon-purple)'];
+
+    const renderEvt = (evts) => evts.map((e, i) => {
+      const start = new Date(e.start);
+      const time = e.allDay ? 'All day' : formatTime(start);
+      return `<div class="calendar-event">
+        <div class="event-time">${time}</div>
+        <div class="event-bar" style="background:${colors[i % colors.length]}"></div>
+        <div class="event-details">
+          <div class="event-title">${escapeHtml(e.title)}</div>
+          ${e.location ? `<div class="event-location">${escapeHtml(e.location)}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('') || '<div class="loading-text">No events</div>';
+
+    document.getElementById('cal-today-events').innerHTML = renderEvt(todayEvents);
+    document.getElementById('cal-today-count').textContent = todayEvents.length + ' events';
+    document.getElementById('ov-calendar').innerHTML = renderEvt(todayEvents);
+    document.getElementById('ov-event-count').textContent = todayEvents.length + ' events';
+
+    // Week grid
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    let weekHtml = '';
+    for (let i = 0; i < 7; i++) {
+      const dt = new Date(new Date().getTime() + i * 86400000);
+      const dateKey = dt.toISOString().split('T')[0];
+      const isToday = i === 0;
+      const dayEvts = (d.byDay || {})[dateKey] || [];
+      weekHtml += `<div class="week-col">
+        <div class="week-col-header ${isToday ? 'today' : ''}">${isToday ? 'Today' : dayNames[dt.getDay()]}</div>
+        <div class="week-col-date">${dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+        ${dayEvts.length ? dayEvts.map((e, j) => {
+          const t = e.allDay ? 'All day' : formatTime(new Date(e.start));
+          return `<div class="week-event" style="border-left-color:${colors[j % colors.length]}">
+            <div class="week-event-time">${t}</div>
+            <div class="week-event-title">${escapeHtml(e.title)}</div>
+          </div>`;
+        }).join('') : '<div style="font-size:0.72rem;color:var(--text-muted);text-align:center;padding:0.5rem;">No events</div>'}
+      </div>`;
+    }
+    document.getElementById('cal-week-grid').innerHTML = weekHtml;
+  } catch (e) {
+    console.warn('Calendar error:', e);
+    showToast('Calendar: Could not connect to proxy', 'error');
+  }
+}
+
+function toggleAddEvent() {
+  const form = document.getElementById('add-event-form');
+  form.classList.toggle('visible');
+  if (form.classList.contains('visible')) document.getElementById('new-event-date').value = new Date().toISOString().split('T')[0];
+}
+
+async function createEvent() {
+  const title = document.getElementById('new-event-title').value.trim();
+  const date = document.getElementById('new-event-date').value;
+  const startTime = document.getElementById('new-event-start').value;
+  const endTime = document.getElementById('new-event-end').value;
+  const location = document.getElementById('new-event-location').value.trim();
+  const invites = document.getElementById('new-event-invites').value.trim();
+  if (!title || !date || !startTime || !endTime) { showToast('Fill in all required fields', 'error'); return; }
+
+  try {
+    const result = await apiPost('/api/calendar/create', { title, date, startTime, endTime, location, invites });
+    if (result.error) { showToast('Event creation failed: ' + result.error, 'error'); return; }
+    showToast('Event created: ' + title + (invites ? ' — invites sent' : ''), 'success');
+    toggleAddEvent();
+    document.getElementById('new-event-title').value = '';
+    document.getElementById('new-event-location').value = '';
+    document.getElementById('new-event-invites').value = '';
+    loadCalendarData(); // Refresh
+  } catch (e) {
+    showToast('Event creation failed', 'error');
+  }
+}
+
+// Override: INSTAGRAM
+async function loadInstagramData() {
+  try {
+    const d = await api('/api/instagram/me?limit=25');
+    if (d.error) { showToast('Instagram: ' + d.error, 'error'); renderIgPlaceholder(); return; }
+
+    const competitors = retrieve('competitors') || CONFIG.COMPETITORS;
+    const tabsEl = document.getElementById('ig-tabs');
+    tabsEl.innerHTML = `
+      <button class="ig-tab active" onclick="switchIgTab('my', this)">My Posts</button>
+      <button class="ig-tab" onclick="switchIgTab('all-comp', this)">All Competitors</button>
+      ${competitors.map(h => '<button class="ig-tab" onclick="switchIgTab(\'' + h + '\', this)">@' + h + '</button>').join('')}
+    `;
+
+    // Map API data to card format
+    const imgColors = ['#1a1a3a','#0f2a2a','#2a1a1a','#1a1a2f','#2a2a0f','#0f1a2a','#1f0f2a','#2a1f0f'];
+    window._myPosts = (d.posts || []).map((p, i) => {
+      const ins = p.insights || {};
+      const reach = ins.reach || 0;
+      const views = ins.views || 0;
+      const likes = ins.total_interactions || 0;
+      const shares = ins.shares || 0;
+      const saves = ins.saved || 0;
+      const engRate = reach > 0 ? ((likes + shares + saves) / reach * 100).toFixed(1) : '0.0';
+      const avgWatch = ins.ig_reels_avg_watch_time ? (ins.ig_reels_avg_watch_time / 1000).toFixed(1) + 's' : '—';
+      const dt = new Date(p.timestamp);
+      return {
+        caption: p.caption || '', type: p.isVideo ? 'reel' : (p.type === 'CAROUSEL_ALBUM' ? 'carousel' : 'image'),
+        handle: window._userHandle || 'me', permalink: p.permalink,
+        date: dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        reach, views, likes, comments: 0, shares, saves, engRate, avgWatch,
+        sortDate: dt.getTime(), sortViews: views, sortLikes: likes, sortSaves: saves,
+        imgUrl: p.thumbnailUrl || p.mediaUrl || '',
+        imgColor: imgColors[i % imgColors.length],
+      };
+    });
+
+    renderIgGrid();
+    renderOverviewPosts();
+
+    // Load competitors in background
+    loadCompetitorData();
+  } catch (e) {
+    console.warn('Instagram error:', e);
+    showToast('Instagram: Could not connect to proxy', 'error');
+  }
+}
+
+async function loadCompetitorData() {
+  try {
+    const competitors = retrieve('competitors') || CONFIG.COMPETITORS;
+    const d = await api('/api/instagram/competitors?handles=' + competitors.join(',') + '&posts=5');
+    if (d.error) { showToast('Competitors: ' + d.error, 'error'); return; }
+
+    const imgColors = ['#1a1a3a','#0f2a2a','#2a1a1a','#1a1a2f','#2a2a0f'];
+    window._compPosts = [];
+
+    for (const [handle, posts] of Object.entries(d.competitors || {})) {
+      if (posts.error) { console.warn('Competitor ' + handle + ':', posts.error); continue; }
+      (Array.isArray(posts) ? posts : []).forEach((p, i) => {
+        window._compPosts.push({
+          caption: p.caption || '', type: 'reel', handle, permalink: p.url || '',
+          date: p.timestamp ? new Date(p.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—',
+          reach: 0, views: p.videoViewCount || p.videoPlayCount || 0,
+          likes: p.likesCount || 0, comments: p.commentsCount || 0,
+          shares: 0, saves: 0, engRate: '—',
+          sortDate: p.timestamp ? new Date(p.timestamp).getTime() : 0,
+          sortViews: p.videoViewCount || p.videoPlayCount || 0,
+          sortLikes: p.likesCount || 0, sortSaves: 0,
+          imgUrl: p.displayUrl || '', imgColor: imgColors[i % imgColors.length],
+        });
+      });
+    }
+
+    if (state.igTab !== 'my') renderIgGrid();
+    renderOverviewPosts();
+    showToast('Competitor data loaded', 'success');
+  } catch (e) {
+    console.warn('Competitor error:', e);
+  }
+}
+
+function renderIgPlaceholder() {
+  // Minimal fallback — just show empty state
+  document.getElementById('ig-grid').innerHTML = '<div class="loading-text">Could not load Instagram data</div>';
+}
+
+function switchIgTab(tab, btn) {
+  state.igTab = tab;
+  document.querySelectorAll('.ig-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderIgGrid();
+}
+
+function sortIgCards(sortBy, btn) {
+  state.igSort = sortBy;
+  document.querySelectorAll('.ig-sort-bar .sort-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderIgGrid();
+}
+
+function getFilteredIgPosts() {
+  let posts;
+  if (state.igTab === 'my') posts = [...window._myPosts];
+  else if (state.igTab === 'all-comp') posts = [...window._compPosts];
+  else posts = window._compPosts.filter(p => p.handle === state.igTab);
+
+  switch (state.igSort) {
+    case 'views': posts.sort((a, b) => b.sortViews - a.sortViews); break;
+    case 'likes': posts.sort((a, b) => b.sortLikes - a.sortLikes); break;
+    case 'saves': posts.sort((a, b) => b.sortSaves - a.sortSaves); break;
+    default: posts.sort((a, b) => b.sortDate - a.sortDate);
+  }
+  return posts;
+}
+
+function renderIgGrid() {
+  const posts = getFilteredIgPosts();
+  const showCreator = state.igTab !== 'my';
+  document.getElementById('ig-grid').innerHTML = posts.length
+    ? posts.map(p => renderPostCard(p, showCreator)).join('')
+    : '<div class="loading-text">No posts to show</div>';
+}
+
+function proxyImg(url) {
+  if (!url) return '';
+  // Route images through local proxy to avoid CORS
+  return CONFIG.PROXY + '/api/image?url=' + encodeURIComponent(url);
+}
+
+function renderPostCard(p, showCreator) {
+  const imgSrc = p.imgUrl ? proxyImg(p.imgUrl) : '';
+  const imgStyle = imgSrc
+    ? `background-image:url('${imgSrc}');background-size:cover;background-position:center;`
+    : `background:${p.imgColor};display:flex;align-items:center;justify-content:center;`;
+  const imgContent = imgSrc ? '' : '<span style="font-size:2.5rem;opacity:0.15;">◎</span>';
+
+  return `
+    <div class="ig-post-card" ${p.permalink ? `onclick="window.open('${p.permalink}','_blank')"` : ''}>
+      <div class="ig-post-image" style="${imgStyle}">${imgContent}</div>
+      <span class="ig-post-type ${p.type}">${p.type}</span>
+      ${showCreator ? `<span class="ig-post-creator">@${p.handle}</span>` : ''}
+      <div class="ig-post-overlay">
+        <div class="ig-post-caption">${escapeHtml((p.caption || '').substring(0, 60))}</div>
+        <div class="ig-post-metrics">
+          <div class="ig-metric"><span class="ig-metric-icon">▶</span><span class="ig-metric-val">${formatNumber(p.views)}</span></div>
+          <div class="ig-metric"><span class="ig-metric-icon">♥</span><span class="ig-metric-val">${formatNumber(p.likes)}</span></div>
+          <div class="ig-metric"><span class="ig-metric-icon">↗</span><span class="ig-metric-val">${formatNumber(p.shares)}</span></div>
+          <div class="ig-metric"><span class="ig-metric-icon">⊡</span><span class="ig-metric-val">${formatNumber(p.saves)}</span></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderOverviewPosts() {
+  // Last 5 posts
+  const recent = window._myPosts.slice(0, 5);
+  if (recent.length) {
+    document.getElementById('ov-post').innerHTML = recent.map(p =>
+      '<div style="flex:1;min-width:160px;max-width:220px;">' + renderPostCard(p, false) + '</div>'
+    ).join('');
+  }
+
+  // Competitor outliers
+  if (window._compPosts.length) {
+    const outliers = [...window._compPosts].sort((a, b) => b.sortViews - a.sortViews).slice(0, 3);
+    document.getElementById('ov-competitors').innerHTML = outliers.map(p =>
+      '<div style="flex:1;min-width:180px;max-width:250px;">' + renderPostCard(p, true) + '</div>'
+    ).join('');
+  }
+}
+
+// Override: NEWS
+async function loadNewsData() {
+  try {
+    const d = await api('/api/news');
+    if (d.error) { showToast('News: ' + d.error, 'error'); return; }
+
+    const articles = (d.articles || []).map(a => ({
+      title: a.title, url: a.url, summary: a.content || '',
+      source: { name: a.source === 'reddit' ? 'Reddit' : a.source === 'twitter' ? 'X' : a.source === 'hn' ? 'HN' : 'Web', cls: a.source },
+      time: a.publishedDate ? new Date(a.publishedDate).toLocaleDateString() : 'Today',
+    }));
+
+    window._allNews = articles;
+    renderNewsList(document.getElementById('news-list'), articles, true);
+    renderNewsList(document.getElementById('ov-news'), articles.slice(0, 3), true);
+  } catch (e) {
+    console.warn('News error:', e);
+    showToast('News: Could not connect to proxy', 'error');
+  }
+}
+
+// SETTINGS
+function saveCompetitors() {
+  const comps = document.getElementById('settings-competitors').value.trim().split('\n').map(h => h.trim().replace(/^@/, '')).filter(Boolean);
+  store('competitors', comps);
+  CONFIG.COMPETITORS = comps;
+  showToast('Competitors saved', 'success');
+}
+
+async function checkProxyStatus() {
+  const el = document.getElementById('proxy-status');
+  try {
+    const d = await api('/api/health');
+    const services = d.services || {};
+    el.innerHTML = Object.entries(services).map(([name, ok]) =>
+      `<div style="display:flex;align-items:center;gap:0.75rem;">
+        <span style="width:10px;height:10px;border-radius:50%;background:${ok ? 'var(--success)' : 'var(--danger)'};box-shadow:0 0 8px ${ok ? 'var(--success)' : 'var(--danger)'};"></span>
+        <span style="font-weight:600;text-transform:capitalize;">${name}</span>
+        <span style="color:${ok ? 'var(--success)' : 'var(--danger)'};font-size:0.8rem;">${ok ? 'Connected' : 'Not connected'}</span>
+      </div>`
+    ).join('');
+  } catch {
+    el.innerHTML = '<div style="color:var(--danger);font-weight:600;">Proxy not running. Start it with the command below.</div>';
+  }
+}
+
+// Load competitors into settings textarea
+function loadSettingsValues() {
+  const el = document.getElementById('settings-competitors');
+  if (el) el.value = (retrieve('competitors') || CONFIG.COMPETITORS).join('\n');
+}
+
+function renderNewsList(container, items, showHint) {
+  container.innerHTML = items.map(n => `
+    <a class="news-item" href="${n.url || '#'}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;color:inherit;">
+      <span class="news-source-badge ${n.source.cls}">${n.source.name}</span>
+      <div class="news-content">
+        <div class="news-title">${escapeHtml(n.title)}</div>
+        <div class="news-summary">${escapeHtml(n.summary)}</div>
+        <div class="news-meta"><span>${n.time}</span></div>
+      </div>
+      ${showHint ? '<span class="news-link-hint">Open →</span>' : ''}
+    </a>
+  `).join('') || '<div class="loading-text">No news articles</div>';
+}
+</script>
+</body>
+</html>
