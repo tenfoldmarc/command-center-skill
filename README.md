@@ -3,7 +3,7 @@
 
 A local HTML dashboard that gives you a single view of your revenue, emails, calendar, Instagram performance, competitor intel, and AI news. No deployment, no database — just open it in your browser.
 
-Pulls live data through a lightweight Node.js proxy that runs on your machine. Pick which services you want, enter your API keys once, and you're set.
+All sections are optional — only enable what you need.
 
 ---
 
@@ -15,8 +15,6 @@ Pulls live data through a lightweight Node.js proxy that runs on your machine. P
 4. **Instagram** — Your last 25 posts with reach, views, shares, saves, and engagement rate. Visual post cards with metrics overlaid.
 5. **Competitor Tracking** — Monitor up to 10 Instagram accounts. See their recent posts, engagement, and outliers. Toggle between your posts and any competitor.
 6. **AI News** — Top stories from Twitter/X, Reddit, and Hacker News. Click any story to read the source.
-
-All sections are optional — only enable what you need.
 
 ---
 
@@ -31,17 +29,10 @@ All sections are optional — only enable what you need.
 ## Requirements
 
 - A Mac, Linux, or Windows computer
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed and working
 - [Node.js](https://nodejs.org) installed (v18 or higher)
-- A modern web browser (Chrome, Firefox, Safari, Edge)
 
-**Optional (depending on which services you enable):**
-- A [Stripe](https://dashboard.stripe.com/apikeys) account — for revenue tracking
-- A Meta/Instagram Business account + access token — for your post analytics ([generate here](https://developers.facebook.com/tools/explorer/))
-- An [Apify](https://apify.com) account (free tier works) — for competitor tracking
-- [gws CLI](https://github.com/nicholasgasior/gws) installed + authenticated — for Gmail and Calendar
-- A [Tavily](https://tavily.com) account (free tier works) — for AI news
-
-Don't worry about connecting these manually — the setup script walks you through everything.
+Don't worry about API keys or accounts — Claude Code walks you through everything on first run.
 
 ---
 
@@ -53,81 +44,74 @@ Don't worry about connecting these manually — the setup script walks you throu
 **Windows:** Press `Win + R`, type **cmd**, hit Enter.
 **Linux:** Open your terminal app.
 
-### Step 2 — Clone the repo
-
-Copy-paste this entire line and hit Enter:
+### Step 2 — Copy-paste this and hit Enter
 
 ```bash
-git clone https://github.com/tenfoldmarc/command-center-skill ~/command-center
+git clone https://github.com/tenfoldmarc/command-center-skill ~/.claude/skills/command-center
 ```
 
-### Step 3 — Run setup
+Wait for it to finish (takes a few seconds).
 
-```bash
-cd ~/command-center && node setup.js
+### Step 3 — Open Claude Code and type:
+
+```
+/command-center
 ```
 
-The setup asks which services you want (Stripe, Instagram, competitors, Gmail, AI News), then only asks for the API keys you actually need.
+That's it. Claude will:
+- Ask which services you want to connect (Stripe, Instagram, competitors, Gmail, AI News)
+- Only ask for API keys for the ones you chose
+- Give you the exact link to get each key
+- Save everything securely on your machine
+- Launch your dashboard
 
-### Step 4 — Start the proxy
-
-```bash
-node proxy.js
-```
-
-Leave this terminal window open.
-
-### Step 5 — Open the dashboard
-
-Open `dashboard.html` in your browser. On Mac:
-
-```bash
-open dashboard.html
-```
-
-On Windows/Linux, just double-click the file or drag it into your browser.
+You never have to touch the terminal setup again.
 
 ---
 
-## Usage
+## Daily Usage
 
-**Daily workflow:**
-1. Open a terminal, `cd ~/command-center`, run `node proxy.js`
-2. Open `dashboard.html` in your browser
-3. Hit the Refresh button (or press `R`) to pull fresh data
+Open Claude Code and type:
 
-**Keyboard shortcuts:**
+```
+/command-center
+```
+
+Claude starts the proxy and opens your dashboard. Or if you prefer doing it manually:
+
+1. Open Terminal
+2. `cd ~/.claude/skills/command-center && node proxy.js`
+3. Open `dashboard.html` in your browser
+
+**Keyboard shortcuts inside the dashboard:**
 - `1-6` — Switch between pages
-- `T` — Toggle dark/light theme
+- `T` — Toggle dark/light mode
 - `R` — Refresh all data
 
-**Customize the design:**
-The entire dashboard is a single HTML file. Edit `dashboard.html` to change colors, fonts, layout, or add new sections. All CSS is embedded — look for the `<style>` block at the top.
+---
+
+## Customization
+
+The entire design is in one file: `dashboard.html`. Open it in any text editor to tweak colors, fonts, layout, or add sections. All CSS is embedded in the `<style>` block at the top.
 
 ---
 
 ## Updating
 
-To get the latest version:
-
 ```bash
-cd ~/command-center && git pull
+cd ~/.claude/skills/command-center && git pull
 ```
 
-Your `.env` file is gitignored and won't be affected by updates.
+Your `.env` file (API keys) is gitignored and won't be affected.
 
 ---
 
-## File Structure
+## Reconfigure
+
+To change which services are connected or update your API keys, type in Claude Code:
 
 ```
-command-center/
-├── dashboard.html    # The dashboard (open in browser)
-├── proxy.js          # Local proxy server (run with node)
-├── setup.js          # Interactive setup wizard
-├── .env              # Your API keys (created by setup, gitignored)
-├── .gitignore
-└── README.md
+/command-center setup
 ```
 
 ---
